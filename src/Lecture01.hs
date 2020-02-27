@@ -13,7 +13,7 @@
   В курсе будет много практики — написание программ и решение
   упражнений. Также будет немного теории.
 
-  Вам необходимо настроить среду для прохождения курса. 
+  Вам необходимо настроить среду для прохождения курса.
   Понадобится компилятор ghc и менеджер пакетов cabal.
   Подробности по установке есть в README.md.
 
@@ -34,7 +34,7 @@ module Lecture01 where
   Как правило, функциональный язык состоит из термов и типов.
 
   Примеры термов:
-  
+
     - числа: 2, 2.3, 324234, 1.2
     - строки: "hello", "i'm just a term"
     - списки: [1,2,3], ["yes, i'm inside this list"]
@@ -80,7 +80,7 @@ c = div 60 2
   Особенностью является унарный минус. Нужно запомнить, что его
   обязательно нужно закрывать в скобки. Иначе парсер языка подумает
   что это бинарный минус. Например:
-  
+
   > 35 * -1
   <interactive>:1:1: error:
     Precedence parsing error
@@ -146,7 +146,7 @@ whatSalary = if isGoodWorker then 100000 else 10000
   В Haskell все конструкции языка - выражения, включая `if _ then _ else`.
   Грубо говоря, выражение - это кусок кода, который возвращает значение.
   Например, 2 + 3 - выражение. "Hello, world!" - тоже выражение.
-  
+
   Поскольку `if_then_else` — это выражение, то у него должен быть тип.
 
   Рассмотрим выражение: (if a then 3 else c) :: X
@@ -177,7 +177,7 @@ double n = n * n
 
 -- Так можно объявить функцию с несколькими аргументами:
 add :: Int -> Int -> Int
-add a b = a + b 
+add a b = a + b
 
 {-
   Чтобы вызвать функцию, необходимо передать ей аргументы через пробел.
@@ -247,7 +247,10 @@ someArithmeticCalculations =
     - если n < 0, то "negative"
 -}
 tellSign :: Int -> String
-tellSign n = error "not implemented"
+tellSign n =
+  if n == 0 then "zero" else
+  if n > 0 then "positive" else
+  "negative"
 
 {-
   `howManyDigits` возвращает количество цифр целого числа `n`:
@@ -256,7 +259,11 @@ tellSign n = error "not implemented"
     - если n >= 100, то "three-digit or more"
 -}
 howManyDigits :: Int -> String
-howManyDigits n = error "not implemented"
+howManyDigits n =
+  let a = abs n in
+  if a < 10 then "single" else
+  if a < 100 then "two-digit" else
+  "three-digit or more"
 
 {-
   `describeNumber` возвращает полное описание целого числа, используя
@@ -267,7 +274,7 @@ howManyDigits n = error "not implemented"
     - если n >= 100, то "positive three-digit or more"
 -}
 describeNumber :: Int -> String
-describeNumber n = error "not implemented"
+describeNumber n = (tellSign n) ++ " " ++ (howManyDigits n)
 
 -- </Задачи для самостоятельного решения>
 
@@ -303,7 +310,8 @@ makeZero x =
   больших чисел.
 -}
 factorial :: Integer -> Integer
-factorial n = error "not implemented"
+factorial 0 = 1
+factorial n = n * (factorial (n - 1))
 
 {-
   На вход приходит целое число. Необходимо вернуть количество цифр:
@@ -312,7 +320,11 @@ factorial n = error "not implemented"
     - если n = 144545, то 6
 -}
 digitsCount :: Int -> Int
-digitsCount n = error "not implemented"
+digitsCount n
+  | a < 10 = 1
+  | otherwise = 1 + digitsCount (div a 10)
+  where
+    a = abs n
 
 -- </Задачи для самостоятельного решения>
 
@@ -347,7 +359,7 @@ makeZero' x = makeZero' (x - 1)
 makeZero'' :: Int -> Int
 makeZero'' x = case x of
   0 -> 0
-  x -> makeZero' (x - 1)
+  x -> makeZero'' (x - 1)
 
 {-
   На самом деле компилятор преобразовывает все уравнения, как в функции `makeZero'`,
@@ -372,7 +384,7 @@ isOldEnoughToBuyBeer n
   -- ^ здесь можно комбинировать какие угодно условия, главное чтобы
   -- выражение имело тип `Bool`
   | otherwise = "No, too young"
-  -- ^ `otherwise` — это просто константа из стандартной библиотеки и равна False
+  -- ^ `otherwise` — это просто константа из стандартной библиотеки и равна True
 
 {-
   Также на уровне синтаксиса языка есть кортежи:
@@ -383,10 +395,10 @@ isOldEnoughToBuyBeer n
 
   Конечно же, бывают кортежи с бОльшим числом элементов.
     y = ('a', "abc", 5, True)
-    
+
   К сожалению, в стандартной библиотеке нет функций для выделения определённого элемента кортежа.
   Такие функции можно реализовать самостоятельно с помощью pattern matching.
-  
+
   fst3 (x, _, _) = x
   snd3 (_, y, _) = y
   thrd3 (_, _, z) = z
