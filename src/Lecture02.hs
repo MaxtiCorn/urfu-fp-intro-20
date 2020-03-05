@@ -35,13 +35,13 @@ import qualified Prelude as P
 
   `List a` — это полиморфный тип, который описывает список, содержащий элементы типа `a`.
   Вы уже сталкивались с подобной записью в других языках, например, в C# мы бы написали `LinkedList<T>`.
-  
+
   Пока опустим то, как мы его объявили, нам достаточно понимать, что `a` — это тип элементов списка.
-  
+
 -}
 data List a
   = Nil           -- соответствует []
-  | a :. (List a) -- 
+  | a :. (List a) --
 --        ^ хвост списка (просто другой список)
 --    ^ функция склеивания головы и хвоста списка (соответствует стандартной (:))
 --  ^ голова списка
@@ -65,7 +65,7 @@ infixr 5 :.
     public class Cons<T> : List<T> {
       public T Value { get; private set; }
       public List<T> Tail { get; private set; }
-    
+
       public Cons(T value, List<T> l) {
         Value = value;
         Tail = l;
@@ -75,7 +75,7 @@ infixr 5 :.
 
 {-
   Тогда список [1, 2, 3, 4, 5] приобретает вид:
-  
+
     1 :. 2 :. 3 :. 4 :. 5 :. Nil
 -}
 
@@ -88,7 +88,8 @@ infixr 5 :.
     - headOr 2 Nil ~> 2
 -}
 headOr :: a -> List a -> a
-headOr = error "not implemented"
+headOr dflt Nil = dflt
+headOr dflt (m :. list) = m
 
 {-
   `take n` возвращает первые `n` элементов списка:
@@ -97,7 +98,9 @@ headOr = error "not implemented"
     - take 0 (1 :. 2 :. 3 :. Nil) ~> Nil
 -}
 take :: Integer -> List a -> List a
-take = error "not implemented"
+take 0 list = Nil
+take n Nil = Nil
+take n (head :. tail) = head :. take (n - 1) tail
 
 {-
   `length xs` возвращает длину списка `xs`:
@@ -107,7 +110,8 @@ take = error "not implemented"
     - length ('a' :. 'b' :. Nil) ~> 2
 -}
 length :: List a -> Integer
-length = error "not implemented"
+length Nil = 0
+length (head :. tail) = 1 + length tail
 
 {-
   `sum` вычисляет сумму списка целых чисел:
@@ -117,7 +121,8 @@ length = error "not implemented"
     - sum (104 :. 123 :. 35 :. Nil) ~> 262
 -}
 sum :: List Integer -> Integer
-sum = error "not implemented"
+sum Nil = 0
+sum (head :. tail) = head + sum tail
 
 -- </Задачи для самостоятельного решения>
 
@@ -155,14 +160,14 @@ sum = error "not implemented"
 
     length = fold (\x -> 1)
     sum = fold (\x -> x)
-  
+
   Сама функция fold (от англ. "свёртка") называется так потому,
   что мы сворачиваем список элементов в одно значение.
 
   А что если мы хотим не складывать элементы, а, например, умножать?
   Надо обобщить `fold` до использования любой бинарной функции и
   тогда ее выполнение примет следующий вид:
-  
+
     foldr f x0 (1 :. 2 :. 3 :. Nil)
   ~> f 1 (foldr f x0 (2 :. 3 :. Nil))
   ~> f 1 (f 2 (foldr f x0 (3 :. Nil)))
@@ -176,13 +181,13 @@ sum = error "not implemented"
 
   Получившаяся функция `foldr` — это функция высшего порядка, так как она принимает в качестве
   аргумента другую функцию. Вы уже сталкивались с функциями вышего порядка в других языках.
-  
+
   Например, в таком LINQ выражении:
-  
+
     list.Where(x => x > 0).ToList();
-  
+
   `Where` тоже функция высшего порядка.
-  
+
   На самом деле foldr это не одна функция, а целый набор функций-свёрток.
 -}
 
@@ -193,7 +198,7 @@ sum = error "not implemented"
   список `xs` справа:
 
     - foldr (\x a -> a + 1) 0 [1, 2, 3, 4] ~> 4
-    
+
     - foldr (\x a -> a + x) 0 [1, 2, 3, 4] ~> 10
 
     - foldr id 1234 Nil ~> 1234
@@ -215,7 +220,8 @@ sum = error "not implemented"
             4   0
 -}
 foldr :: (a -> b -> b) -> b -> List a -> b
-foldr f b xs = error "not implemented"
+foldr f b Nil = b
+foldr f b (head :. tail) = f head (foldr f b tail)
 
 {-
   `map` принимает функцию `f` и список, применяя `f` к каждому элементу:
@@ -227,7 +233,11 @@ foldr f b xs = error "not implemented"
   Реализуйте с помощью `foldr`.
 -}
 map :: (a -> b) -> List a -> List b
-map = error "not implemented"
+--map f Nil = Nil
+--map f (head :. tail) = (f head) :. (map f tail)
+mapper :: (a -> b) -> (a -> List b -> List b)
+mapper f = \ela listb -> (f ela) :. listb
+map f list = foldr (mapper f) Nil list
 
 {-
   `filter` принимает предикат `f` и список, возвращая список с элементами
@@ -240,7 +250,15 @@ map = error "not implemented"
   Реализуйте с помощью `foldr`.
 -}
 filter :: (a -> Bool) -> List a -> List a
-filter = error "not implemented"
+{-
+filter f Nil = Nil
+filter f (head :. tail)
+  | f head = head :. (filter f tail)
+  | otherwise = filter f tail
+-}
+filterer :: (a -> Bool) -> (a -> List a -> List a)
+filterer f = \ela lista -> if (f ela) then ela :. lista else lista
+filter f list = foldr (filterer f) Nil list
 
 {-
   Правая свёртка действует на список справа, с конца.
@@ -283,18 +301,21 @@ filter = error "not implemented"
   список `xs` слева:
 -}
 foldl :: (b -> a -> b) -> b -> List a -> b
-foldl f b xs = error "not implemented"
+foldl f b Nil = b
+foldl f b (head :. tail) = foldl f (f b head) tail
 
 {-
   `reverse` разворачивает список:
     - reverse Nil ~> Nil
     - reverse (1 :. 2 :. 3 :. Nil) ~> (3 :. 2 :. 1 :. Nil)
-    - reverse ('a' :. 'b' :. 'c' :. Nil) ~> ('c' :. 'b' :. 'a' :. Nil) 
+    - reverse ('a' :. 'b' :. 'c' :. Nil) ~> ('c' :. 'b' :. 'a' :. Nil)
 
   Реализуйте с помощью `foldl`.
 -}
 reverse :: List a -> List a
-reverse = error "not implemented"
+g :: List a -> a -> List a
+g list b = b :. list
+reverse list = foldl g Nil list
 
 {-
   Пришло время перейти к стандартным спискам. Напишите функцию, которая
@@ -308,7 +329,7 @@ reverse = error "not implemented"
     - (:.) соответствует (:)
 -}
 toListH :: List a -> [a]
-toListH = error "not implemented"
+toListH list = foldr (\el lst -> el : lst) [] list
 
 -- И обратно
 fromListH :: [a] -> List a
@@ -355,7 +376,7 @@ fromListH = error "not implemented"
 
 {-
   Стандартный тип `String` для представления строк в Haskell является
-  синонимом типа `[Char]`: 
+  синонимом типа `[Char]`:
 
   Prelude> :t "Hello world"
   "Hello world" :: [Char]
