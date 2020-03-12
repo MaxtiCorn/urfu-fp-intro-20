@@ -89,7 +89,7 @@ infixr 5 :.
 -}
 headOr :: a -> List a -> a
 headOr dflt Nil = dflt
-headOr dflt (m :. list) = m
+headOr dflt (head :. tail) = head
 
 {-
   `take n` возвращает первые `n` элементов списка:
@@ -98,8 +98,8 @@ headOr dflt (m :. list) = m
     - take 0 (1 :. 2 :. 3 :. Nil) ~> Nil
 -}
 take :: Integer -> List a -> List a
-take 0 list = Nil
-take n Nil = Nil
+take 0 _ = Nil
+take _ Nil = Nil
 take n (head :. tail) = head :. take (n - 1) tail
 
 {-
@@ -220,7 +220,7 @@ sum (head :. tail) = head + sum tail
             4   0
 -}
 foldr :: (a -> b -> b) -> b -> List a -> b
-foldr f b Nil = b
+foldr _ b Nil = b
 foldr f b (head :. tail) = f head (foldr f b tail)
 
 {-
@@ -233,11 +233,7 @@ foldr f b (head :. tail) = f head (foldr f b tail)
   Реализуйте с помощью `foldr`.
 -}
 map :: (a -> b) -> List a -> List b
---map f Nil = Nil
---map f (head :. tail) = (f head) :. (map f tail)
-mapper :: (a -> b) -> (a -> List b -> List b)
-mapper f = \ela listb -> (f ela) :. listb
-map f list = foldr (mapper f) Nil list
+map f list = foldr (\ela listb -> (f ela) :. listb) Nil list
 
 {-
   `filter` принимает предикат `f` и список, возвращая список с элементами
@@ -250,15 +246,7 @@ map f list = foldr (mapper f) Nil list
   Реализуйте с помощью `foldr`.
 -}
 filter :: (a -> Bool) -> List a -> List a
-{-
-filter f Nil = Nil
-filter f (head :. tail)
-  | f head = head :. (filter f tail)
-  | otherwise = filter f tail
--}
-filterer :: (a -> Bool) -> (a -> List a -> List a)
-filterer f = \ela lista -> if (f ela) then ela :. lista else lista
-filter f list = foldr (filterer f) Nil list
+filter f list = foldr (\ela lista -> if (f ela) then ela :. lista else lista) Nil list
 
 {-
   Правая свёртка действует на список справа, с конца.
@@ -301,7 +289,7 @@ filter f list = foldr (filterer f) Nil list
   список `xs` слева:
 -}
 foldl :: (b -> a -> b) -> b -> List a -> b
-foldl f b Nil = b
+foldl _ b Nil = b
 foldl f b (head :. tail) = foldl f (f b head) tail
 
 {-
@@ -313,9 +301,7 @@ foldl f b (head :. tail) = foldl f (f b head) tail
   Реализуйте с помощью `foldl`.
 -}
 reverse :: List a -> List a
-g :: List a -> a -> List a
-g list b = b :. list
-reverse list = foldl g Nil list
+reverse list = foldl (\list b -> b :. list) Nil list
 
 {-
   Пришло время перейти к стандартным спискам. Напишите функцию, которая
@@ -333,7 +319,8 @@ toListH list = foldr (\el lst -> el : lst) [] list
 
 -- И обратно
 fromListH :: [a] -> List a
-fromListH = error "not implemented"
+fromListH [] = Nil
+fromListH (head : tail) = head :. fromListH tail
 
 -- </Задачи для самостоятельного решения>
 
@@ -412,7 +399,7 @@ fromListH = error "not implemented"
     P.foldr :: (a -> b -> b) -> b -> [a] -> b
 -}
 concat :: [[a]] -> [a]
-concat ls = error "not implemented"
+concat ls = P.foldr (++) [] ls
 
 {-
   Функция `intercalate` вставляет список элементов между другими списками.
@@ -427,6 +414,7 @@ concat ls = error "not implemented"
     P.foldr :: (a -> b -> b) -> b -> [a] -> b
 -}
 intercalate :: [a] -> [[a]] -> [a]
-intercalate sep ls = error "not implemented"
+intercalate _ [] = []
+intercalate sep (head : tail) = P.foldl (\a b -> a ++ sep ++ b) head tail
 
 -- </Задачи для самостоятельного решения>
