@@ -43,11 +43,11 @@ module Lecture04 where
   В Haskell для объявления нового типа используется ключевое слово `data`:
 -}
 
-data Animal = Animal Int String deriving (Eq, Show) 
+data Animal = Animal Int String deriving (Eq, Show)
 {-                   ^--------^ параметры конструктора
               ^ конструктор типа
      ^ имя типа
-   
+
   В Haskell необязательно давать имена параметрам типа в конструкторе.
   Типы с именованными полями называются records или записи.
   Познакомимся с ними чуть позже.
@@ -88,7 +88,7 @@ canMeow (Animal _ _) = error "Непонятно что за зверь"
        Определить `canMeow` в Animal и переопределить в наследниках.
     2. Использовать typeof и смотреть на тип объекта в рантайме.
        При этом Cat и Lion могут быть связаны или несвязаны иерархией наследования.
-    3. Определить интерфейс IMeowable с методом `canMeow` 
+    3. Определить интерфейс IMeowable с методом `canMeow`
     4. Определить Enum AnimalType и добавить его в Animal, а потом
        использовать switch/if.
     5. Использовать Church encoding.
@@ -140,7 +140,7 @@ canMeow'' (Duck' _ _) = False
     getFoodPrice = ...
 
   Мы ничего не меняли в старом коде.
-  
+
   В ООП языке такой тип выглядел бы как абстрактный класс с несколькими наследниками.
   Значит, если мы хотим добавить новый метод в иерархию, мы вынуждены пойти
   в каждого наследника и написать реализацию этого метода для него.
@@ -192,7 +192,7 @@ canMeow'' (Duck' _ _) = False
     }
 
     // Теперь добавим функцию Accept в Statement и её реализацию в каждого наследника
-    
+
     public interface IStatement
     {
         T Accept<T>(IVisitor<T> visitor);
@@ -304,7 +304,7 @@ data RAnimal = RAnimal
     > :t Commission
     Commission :: Double -> Commission
 
-    > :t getCommission 
+    > :t getCommission
     getCommission :: Commission -> Double
 
   Как можно заметить, `newtype` создает изоморфизм между типами.
@@ -329,7 +329,10 @@ newtype AdoptedAnimal = AdoptedAnimal
     - Month
     - Year
 -}
-showDate :: Int -> Int -> Int -> String
+newtype Day   = Day Int deriving Show
+newtype Month = Month Int deriving Show
+newtype Year  = Year Int deriving Show
+showDate :: Day -> Month -> Year -> String
 showDate day month year =
   "Day " ++ show day ++ " of " ++ show month ++ " month, year " ++ show year
 
@@ -370,7 +373,8 @@ showDate day month year =
   - uncons [1,2,3] ~> (Just 1, [2, 3])
 -}
 uncons :: [a] -> (Maybe a, [a])
-uncons l = error "not implemented"
+uncons [] = (Nothing, [])
+uncons (head : tail) = ((Just head), tail)
 
 {-
   zipMaybe возвращает пару значений, если оба значения не Nothing:
@@ -380,7 +384,8 @@ uncons l = error "not implemented"
   - zipMaybe (Just "hey") (Just 2) ~> Just ("hey", 2)
 -}
 zipMaybe :: Maybe a -> Maybe b -> Maybe (a, b)
-zipMaybe a b = error "not implemented"
+zipMaybe (Just a) (Just b) = Just (a, b)
+zipMaybe a b = Nothing
 
 -- </Задачи для самостоятельного решения>
 
@@ -401,7 +406,7 @@ zipMaybe a b = error "not implemented"
   то возвращает причину.
 
   Животные приручаются по следующим правилам:
-  
+
     - если это кот:
       - можно приручить, если младше 5 лет и имя не начинается с "D"
       - иначе сообщать "Can't adopt cat"
@@ -415,7 +420,16 @@ zipMaybe a b = error "not implemented"
       - сообщать "Can't adopt lions :("
 -}
 adopt :: AnimalWithType -> Either String AdoptedAnimal
-adopt = error "not implemented"
+adopt (AnimalWithType _ ('D' : nameTail) Cat) = Left "Can't adopt cat"
+adopt cat @ (AnimalWithType age _ Cat)
+  | age < 5   = Right AdoptedAnimal { getAdoptedAnimal = cat }
+  | otherwise = Left "Can't adopt cat"
+adopt dog @ (AnimalWithType age _ Dog)
+  | age > 1   = Right AdoptedAnimal { getAdoptedAnimal = dog }
+  | otherwise = Left "Can't adopt dog"
+adopt duck @ (AnimalWithType _ "Daisy" Duck) = Right AdoptedAnimal { getAdoptedAnimal = duck }
+adopt (AnimalWithType _ _ Duck) = Left "Quack"
+adopt (AnimalWithType _ _ Lion) = Left "Can't adopt lions :("
 
 -- </Задачи для самостоятельного решения>
 
@@ -445,7 +459,7 @@ adopt = error "not implemented"
     |AnimalType| = 4
 
   Типы с одинаковыми cardinality изоморфны.
-  
+
   Какой cardinality у полиморфных ADT?
 
   1. Sum type
@@ -469,7 +483,7 @@ adopt = error "not implemented"
 
   Посчитайте cardinality для:
 
-  1. |Bool| = 
+  1. |Bool| =
 
   2. |(Bool, Bool)| =
 
@@ -492,9 +506,9 @@ adopt = error "not implemented"
 {-
   В этом задании вам необходимо самостоятельно написать конструкторы бинарного дерева
   и вспомогательные функции. Тесты написаны так, что вспомогательные функции
-  зависят друг друга. 
+  зависят друг друга.
 -}
-data Tree a
+data Tree a = Nil | Tree a (Tree a) (Tree a)
   {-
     Определите конструкторы для бинарного дерева:
       - лист
@@ -504,11 +518,13 @@ data Tree a
 
 -- Возвращает пустое дерево
 empty :: Tree a
-empty = error "not implemented"
+empty = Nil
 
 -- Возвращает True, если дерево - это лист
 isLeaf :: Tree a -> Bool
-isLeaf t = error "not implemented"
+isLeaf Nil              = True
+isLeaf (Tree _ Nil Nil) = True
+isLeaf _                = False
 
 -- Возвращает True, если дерево - не лист
 isNode :: Tree a -> Bool
@@ -516,32 +532,38 @@ isNode = not . isLeaf
 
 -- Если дерево это нода, то возвращает текущее значение ноды
 getValue :: Tree a -> Maybe a
-getValue t = error "not implemented"
+getValue Nil          = Nothing
+getValue (Tree a _ _) = Just a
 
 -- Если дерево это нода, то возвращает левое поддерево
 getLeft :: Tree a -> Maybe (Tree a)
-getLeft t = error "not implemented"
+getLeft (Tree _ left _) = Just left
+getLeft _               = Nothing
 
 -- Если дерево это нода, то возвращает правое поддерево
 getRight :: Tree a -> Maybe (Tree a)
-getRight t = error "not implemented"
+getRight (Tree _ _ right) = Just right
+getRight _                = Nothing
 
 {-
   Вставка значения в дерево:
 
-    - insert 3 empty ~> Node Leaf 3 Leaf 
+    - insert 3 empty ~> Node Leaf 3 Leaf
     - insert 1 $ insert 3 $ insert 2 empty ~> Node (Node Leaf 1 Leaf) 2 (Node Leaf 3 Leaf)
     - insert 3 $ insert 2 $ insert 1 empty ~> Node Leaf 1 (Node Leaf 2 (Node Leaf 3 Leaf))
     - insert 1 $ insert 2 $ insert 3 empty ~> Node (Node (Node Leaf 1 Leaf) 2 Leaf) 3 Leaf
-    
+
    Обратите внимание, что требуется именно бинарное дерево поиска.
    https://en.wikipedia.org/wiki/Binary_search_tree
 
    В этом задании вам поможет функция `compare`. Она умеет возвращать
    три значения: GT, EQ, LT. Попробуйте поиграться в repl.
--} 
+-}
 insert :: Ord a => a -> Tree a -> Tree a
-insert v t = error "not implemented"
+insert v Nil                 = Tree v Nil Nil
+insert v (Tree a left right) = case compare v a of
+  GT -> Tree a left (insert v right)
+  _  -> Tree a (insert v left) right
 
 {-
   Проверка наличия значения в дереве:
@@ -553,6 +575,10 @@ insert v t = error "not implemented"
     - isElem 4 $ insert 1 $ insert 3 $ insert 2 empty ~> False
 -}
 isElem :: Ord a => a -> Tree a -> Bool
-isElem v tree = error "not implemented"
+isElem v Nil = False
+isElem v (Tree a left right) = case compare v a of
+  EQ -> True
+  GT -> isElem v right
+  LT -> isElem v left
 
 -- </Задачи для самостоятельного решения>
