@@ -9,7 +9,7 @@ module Lecture06 where
   - классифицировать виды полиморфизма
     - interfaces, +, -, классы типов
       - это будет потом
-  
+
   - system f
   - a -> a, a -> [a]
     - higher rank полиморфизм
@@ -21,9 +21,9 @@ module Lecture06 where
   - generics
     - выразительность
     - ограничения
-  
+
   - разница между parametricity и generics
-    - сильные ограничения => сильные гарантии => новая информация 
+    - сильные ограничения => сильные гарантии => новая информация
     - выразительность != мощность (generic'и не менее сильны в плане выразительности,
       но дают меньшие гарантии и поэтому в некотором смысле уступают)
     - tradeoff
@@ -71,7 +71,7 @@ module Lecture06 where
         | false
         | 0
         | ...
-  
+
   Нам понадобится понятие контекста.
   Контекст (typing context, также typing environment) — набор предположений
   о типах свободных переменных в терме.
@@ -94,7 +94,7 @@ module Lecture06 where
                     Г ⊢ t : T' -> T   Г ⊢ t' : T'
       (T-App)   -------------------------------------
                             Г ⊢ t t' : T
-      
+
                   Г, x : T  ⊢  t : T'     -- из контекста следует, что t имеет тип T'2'
       (T-Abs)   -----------------------
                  Г ⊢ λx:T.t : T -> T'
@@ -108,7 +108,7 @@ module Lecture06 where
     ⊢ λx:Bool.x : Bool -> Bool            ⊢ true : Bool
     ------------------------------------------------------ T-App
                   ⊢ (λx:Bool.x) true : Bool
-    
+
     Обратите внимание, что аннотации типов есть только в определениях связанных
     переменных. В каком смысле этого «достаточно»?
 
@@ -130,8 +130,12 @@ module Lecture06 where
   если нет, то докажите это (напишите, почему)
 
   *Решение*
+  Заметим, что Γ ⊢ x x : T - это (T-App, аппликация) и первый терм х должен иметь тип T' -> T, чтобы применить его на самого себя.
+  Но тогда получим такой терм с такими типами x|:T' -> T| x|:T' -> T| : T.
+  Теперь нельзя применить второй терм на первый, так как тип T' -> T !== T'.
 -}
 -- </Задачи для самостоятельного решения>
+
 
 {- Что это даёт?
 
@@ -168,7 +172,7 @@ module Lecture06 where
 
   Теорема (Сохранение).
   Если Г ⊢ t : T и t -> t′, то Г ⊢ t′ : T.
-  
+
   Другими словами вычисление не меняет тип терма.
 
   Ещё один важнеший результат — теорема о нормальной форме.
@@ -185,7 +189,7 @@ module Lecture06 where
     erase (x) = x
     erase (λx:T1.t2) = λx.erase (t2)
     erase (t1 t2) = (erase (t1)) (erase (t2))
-  
+
   Можно доказать, что после выполнения такой функции типизированный терм становится
   корректным термом бестипового лямбда-исчисления.
 
@@ -220,7 +224,7 @@ module Lecture06 where
   Если говорить в общем, то полиморфизм это способность кода работать для разных
   типов. И реализован он может быть по-разному. В этих лекциях мы посмотрим
   по крайней мере на три вида полиморфизма.
-  
+
   Попробуем реализовать полиморфизм в нашей системе.
   Добавим к базовым типам некий тип X, которым будем пользоваться так же, как
   типами Bool или Numeral, но определять не будем:
@@ -228,7 +232,7 @@ module Lecture06 where
       T ::=
             X
           | ...
-  
+
   Тогда мы бы могли определить тип [] как [X], где X — переменная типа.
   Допустим у нас есть некий терм t, в типе которого участвует такая переменная X.
   Тогда мы можем задать два существенно различных вопроса о типе t:
@@ -241,12 +245,12 @@ module Lecture06 where
   Например, рассмотрим вот такой терм с двумя типовыми переменными X и Y:
 
     λf:Y. λa:X. f (f a)
-  
+
   очевидно, что на вопрос 1. ответ — "нет". Действительно при X = Bool, а Y = Char,
   получим нечто невыводимое в нашей системе типов:
-      
+
     λf:Char. λa:Bool. f (f a)
-  
+
   Однако, если заменить Y на X->X, получится правильный типизированный терм:
 
     λf:X->X. λa:X. f (f a) -- типизируем даже в смысле 1. несмотря на переменную X
@@ -326,16 +330,23 @@ module Lecture06 where
   Убедитесь, что selfApp работает. Приведите терм `selfApp id` в нормальную форму
   и запишите все шаги β-редукции ->β.
 
-  selfApp id = ... ->β ...
+  selfApp id = (λz:∀X.X->X.z [∀X.X->X] z) (id:∀X.X->X) =α
+               (λz:∀X.X->X.z [∀Z.Z->Z] z) (id:∀Y.Y->Y) ->β
+               (id:∀Y.Y->Y) [∀Z.Z->Z] (id:∀Y.Y->Y) =
+               (id:(∀Z.Z->Z)->(∀Z.Z->Z)) (id:∀Y.Y->Y) ->
+               λx:(∀Z.Z->Z)->(∀Z.Z->Z).x (id:∀Y.Y->Y) ->β
+               (id:∀Y.Y->Y)
+
 -}
 -- </Задачи для самостоятельного решения>
+
 
 {- Вернёмся к Haskell
 
   Обычно, в Haskell пропускается квантор всеобщности, подразумевается, что он
   применяется ко всем типовым переменным полиморфных функций. Но можно включить
   явный forall (вместо ∀) при выводе типов:
- 
+
     > :t []
     [] :: [a]
     >:set -fprint-explicit-foralls
@@ -448,7 +459,7 @@ module Lecture06 where
 
 
     Шаблоны/Generic/Template
-    
+
     List<T> Reverse<T>(List<T> list)
     {
       ...
@@ -473,7 +484,7 @@ module Lecture06 where
       f :: a -> a           -- или, можно по-дргому
       f :: forall a. a -> a -- или, то же самое в System F
       f : ∀X.X -> X
-    
+
     Что может делать такая функция? Что-нибудь придумали?
     Убедитесь, что то, что вы придумали работает и для строк, и для чисел,
     и для таплов, и для функций. Придумали?
@@ -491,7 +502,7 @@ module Lecture06 where
     Что же мы можем сказать по аналогичному типу в C#:
 
       List<T> R<T>(List<T> list)
-    
+
     Наверняка? Ни-че-го. Конечно, можно придерживаться каких-то правил,
     соглашений, паттернов и т.д. Но внутри может быть что-то такое:
 
@@ -502,7 +513,7 @@ module Lecture06 where
         else if (a[i] is Integer integer) { ... }
         ...
       }
-    
+
     И не только это. Такой полиморфизм не удовлетворяет главному требованию
     параметрического полиморфизма — одинаковая работа для всех типов.
     Он может быть таким, но вы не можете быть в этом уверены наверняка.
@@ -535,9 +546,9 @@ module Lecture06 where
 
     Рассмотрим только один пример из этой статьи. Пусть у нас есть функции r и q:
 
-      r : ∀X.[X] -> [X]   
+      r : ∀X.[X] -> [X]
       q : ∀X.∀Y.X -> Y
-      
+
     Тогда `q . map r = r . map q`. -- r слева и справа конкретиризуется для разных типов.
     Интуитивно, мы понимаем, что можно сначала переупорядочить (что-то такое, наверное,
     делает r) элементы списка, а потом отобразить, или сначала отобразить,
@@ -551,7 +562,7 @@ module Lecture06 where
 
     Язык позволяет нам "подкрутить" детали в зависимости от конкретного типа.
     Это довольно удобно. Вы наверняка не раз пользовались конструкциями as, is, typeof.
-    В Haskell так нельзя (нужны классы типов, но это не то же самое). 
+    В Haskell так нельзя (нужны классы типов, но это не то же самое).
 
     На самом деле, в C# вы можете выбрать инструмент под задачу.
     Сделать одно и то же разными способами в зависимости от того, как удобно или хочется.
@@ -578,16 +589,16 @@ module Lecture06 where
 -}
 
 f :: [a] -> Int
-f = error "not implemented"
+f = length
 
-g :: (a -> b)->[a]->[b]
-g = error "not implemented"
+g :: (a -> b) -> [a] -> [b]
+g = map
 
 q :: a -> a -> a
-q x y = error "not implemented"
+q x y = y
 
 p :: (a -> b) -> (b -> c) -> (a -> c)
-p f g = error "not implemented"
+p f g = g . f
 
 {-
   Крестики-нолики Чёрча.
@@ -597,7 +608,7 @@ p f g = error "not implemented"
 
     > :load src/Lecture06/XsOs.hs
     > startXsOs
-  
+
   Но для её запуска нужно хоть как-нибудь реализовать функции ниже.
 -}
 
@@ -608,42 +619,86 @@ type Field = Index -> Row
 
 -- Обсудим это на следующем занятии
 instance Show Index where
-  show First = "1"
+  show First  = "1"
   show Second = "2"
-  show Third = "3"
+  show Third  = "3"
 
 instance Show Value where
-  show Zero = "o"
+  show Zero  = "o"
   show Cross = "x"
   show Empty = "."
 
 createRow :: Value -> Value -> Value -> Row
 createRow x y z = \case
-  First -> x
+  First  -> x
   Second -> y
-  Third -> z
+  Third  -> z
 
 createField :: Row -> Row -> Row -> Field
-createField x y z = error "not implemented"
+createField x y z = \case
+  First  -> x
+  Second -> y
+  Third  -> z
 
 -- Чтобы было с чего начинать проверять ваши функции
 emptyField :: Field
 emptyField = createField emptyLine emptyLine emptyLine
-  where
-    emptyLine = createRow Empty Empty Empty
+  where emptyLine = createRow Empty Empty Empty
 
 setCellInRow :: Row -> Index -> Value -> Row
-setCellInRow r i v = error "not implemented"
+setCellInRow r i v = \index -> if index == i then v else r index
 
 -- Возвращает новое игровое поле, если клетку можно занять.
 -- Возвращает ошибку, если место занято.
 setCell :: Field -> Index -> Index -> Value -> Either String Field
-setCell field i j v = error "not implemented"
+setCell field i j v = case (field i j) of
+  Empty -> Right (\r -> \c -> if i == r && j == c then v else field r c)
+  _     -> Left
+    (  "There is '"
+    ++ (show (field i j))
+    ++ "' on "
+    ++ (show i)
+    ++ " "
+    ++ (show j)
+    )
 
 data GameState = InProgress | Draw | XsWon | OsWon deriving (Eq, Show)
 
+indexes :: [Index]
+indexes = First : Second : Third : []
+
+mainDiagonal :: Field -> [Value]
+mainDiagonal field = map (\i -> field i i) indexes
+
+secondDiagonal :: Field -> [Value]
+secondDiagonal field =
+  [field First Third, field Second Second, field Third First]
+
+flatten :: [[a]] -> [a]
+flatten xss = [ x | xs <- xss, x <- xs ]
+
+isAnyEmpty :: Field -> Bool
+isAnyEmpty field =
+  any (== Empty) (flatten (map (\r -> map (\c -> field r c) indexes) indexes))
+
+isAllRow :: Field -> Index -> Value -> Bool
+isAllRow field r v = all (== v) (map (\i -> field r i) indexes)
+
+isAllColumn :: Field -> Index -> Value -> Bool
+isAllColumn field c v = all (== v) (map (\i -> field i c) indexes)
+
+isWin :: Field -> Value -> Bool
+isWin field v =
+  all (== v) (mainDiagonal field)
+    || all (== v) (secondDiagonal field)
+    || any id (map (\i -> (isAllRow field i v)) indexes)
+    || any id (map (\i -> (isAllColumn field i v)) indexes)
+
 getGameState :: Field -> GameState
-getGameState field = error "not implemented"
+getGameState field | isWin field Cross = XsWon
+                   | isWin field Zero  = OsWon
+                   | isAnyEmpty field  = InProgress
+                   | otherwise         = Draw
 
 -- </Задачи для самостоятельного решения>
 
