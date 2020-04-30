@@ -1,11 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lecture07 where
 
-import Lecture07.Money
-import Data.Semigroup
-import Data.Foldable
+import           Lecture07.Money
+import           Data.Semigroup
+import           Data.Foldable
 
 {-
   07: Классы типов
@@ -41,7 +42,7 @@ import Data.Foldable
       - UndecidableInstances
       - OverlappingInstances
       - IncoherentInstances
-      - ConstrainedClassMethods 
+      - ConstrainedClassMethods
   - deriving (Eq, Show)
     - https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/generic-deriving
 -}
@@ -65,15 +66,32 @@ data Expr
   | Abs Expr
   deriving Eq
 
+showExpr :: Expr -> String
+showExpr (Number x) = show x
+showExpr (Abs    x) = show x
+showExpr x          = "(" ++ show x ++ ")"
+
+instance Show Expr where
+  show (Number x    ) = show x
+  show (Plus  x y   ) = showExpr x ++ " + " ++ showExpr y
+  show (Minus x y   ) = showExpr x ++ " - " ++ showExpr y
+  show (Mult  x y   ) = showExpr x ++ " * " ++ showExpr y
+  show (UnaryMinus x) = "-" ++ showExpr x
+  show (Abs        x) = "|" ++ show x ++ "|"
+
 {-
   Реализуйте instance Semigroup для вектора:
 -}
 newtype Vec a = Vec { unVec :: [a] } deriving (Eq, Show)
+instance Num a => Semigroup (Vec a) where
+  Vec x <> Vec y = Vec (zipWith (+) x y)
 
 {-
   Реализуйте instance Semigroup для типа для логгирования:
 -}
 newtype LogEntry = LogEntry { unLogEntry :: String } deriving (Eq, Show)
+instance Semigroup LogEntry where
+  LogEntry x <> LogEntry y = LogEntry (x ++ y)
 
 {-
   В `src/Lecture07/Money.hs` определены:
@@ -84,20 +102,37 @@ newtype LogEntry = LogEntry { unLogEntry :: String } deriving (Eq, Show)
   Реализуйте инстансы Semigroup для Money a.
 -}
 
+instance Semigroup (Money RUB) where
+  (<>) ma mb = mkRubbles ((getMoney ma) + (getMoney mb))
+
+instance Semigroup (Money USD) where
+  (<>) ma mb = mkDollars ((getMoney ma) + (getMoney mb))
+
 {-
   Реализуйте инстанс Functor для ExactlyOne
 -}
 data ExactlyOne a = ExactlyOne a deriving (Eq, Show)
+
+instance Functor ExactlyOne where
+  fmap f (ExactlyOne a) = ExactlyOne (f a)
 
 {-
   Реализуйте инстанс Functor для `Maybe a`
 -}
 data Maybe' a = Just' a | Nothing' deriving (Eq, Show)
 
+instance Functor Maybe' where
+  fmap f (Just' a) = Just' (f a)
+  fmap _ _         = Nothing'
+
 {-
   Реализуйте инстанс Functor для `List a`
 -}
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
+
+instance Functor List where
+  fmap _ Nil        = Nil
+  fmap f (Cons h t) = Cons (f h) (fmap f t)
 
 {-
   `FileTree a` — тип для представления дерева файловой системы.
@@ -111,7 +146,7 @@ data FileTree a
   deriving (Eq, Show)
 
 {-
-  `FileInfo` — тип с информацией о файле: содержит его размер и дату последнего изменения. 
+  `FileInfo` — тип с информацией о файле: содержит его размер и дату последнего изменения.
 -}
 data FileInfo = FileInfo
   { size :: Integer
@@ -127,7 +162,7 @@ data FileInfo = FileInfo
 
 -- Пример использования Foldable для суммирования размера файла
 fileSizeOfTree :: FileTree FileInfo -> Integer
-fileSizeOfTree = getSum . foldMap (\FileInfo{..} -> Sum size)
+fileSizeOfTree = getSum . foldMap (\FileInfo {..} -> Sum size)
 -- С помощью расширения RecordWildCards     ^
 -- мы раскрываем record и получаем доступ к полю size   ^^^^
 
@@ -138,7 +173,7 @@ instance Bounded [Char] where
 
 -- А здесь используется для нахождения даты последнего изменения
 latestModified :: FileTree FileInfo -> String
-latestModified = getMax . foldMap (\FileInfo{..} -> Max modified)
+latestModified = getMax . foldMap (\FileInfo {..} -> Max modified)
 
 {-
   Чтобы функции выше работали, необходимо
@@ -146,7 +181,9 @@ latestModified = getMax . foldMap (\FileInfo{..} -> Max modified)
 -}
 
 instance Foldable FileTree where
-  foldMap = undefined
+  foldMap _ Empty            = mempty
+  foldMap f (File _ info   ) = f info
+  foldMap f (Dir  _ subtree) = foldMap (foldMap f) subtree
 
 {-
   В этом задании вам необходимо придумать и написать иерархию исключений
@@ -163,5 +200,22 @@ instance Foldable FileTree where
 
   Реализовывать инстансы не нужно.
 -}
+
+data Json = Json String
+
+data Severity = Debug | Info | Error | Warn
+
+class Exception e where
+  message :: e -> String
+
+class Exception e => ApiException e where
+  jsonMessage :: e -> Json
+  severity :: e -> Severity
+
+class Exception e => DbException e where
+  dbMessage :: e -> String
+
+class Exception e => DomainException e ctx where
+  context :: e -> ctx
 
 -- </Задачи для самостоятельного решения>
