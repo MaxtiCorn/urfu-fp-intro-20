@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes, ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Lecture08 where
 
-import Data.Char
-import Data.Array
-import qualified Data.Set as Set
-import qualified Data.IntMap as Map
+import           Data.Char
+import           Data.Array
+import qualified Data.Set                      as Set
+import qualified Data.IntMap                   as Map
 
 {- 08: Структуры данных
 
@@ -14,12 +15,12 @@ import qualified Data.IntMap as Map
   или ином смысле удобно и эффективно с ними обращаться. Поэтому эти типы также часто
   называют контейнерными. Конечно, чтобы ими было удобно пользоваться, они должны
   уметь хранить элементы любых типов, т.е. быть полиморфными.
-  
+
   Обычно контейнерные структуры имеют следующие операции:
    - insert   - добавление элемента
    - remove   - удаление элемента
    - contains - проверка наличия элемента в структуре, доступ к элементу в случае его наличия
-   
+
   Основное различие между структурами данных состоит в том, насколько эффективно выполняются
   эти операции. При этом эффективность операций можно рассматривать в худшем случае и в среднем.
   Для оценки в худшем случае нужно найти данные, на которых будет совершенно больше всего операций,
@@ -28,10 +29,10 @@ import qualified Data.IntMap as Map
 -}
 
 {- Stack
-  
+
   Если вдруг вы забыли, что это https://neerc.ifmo.ru/wiki/index.php?title=Стек.
   Основные операции на стеке: Push, Pop, IsEmpty, иногда к ним добавляют Peek (посмотреть вершину, не удаляя).
-  
+
   Стек — одна из самых простых для реализации в ФП структура данных. Её очень легко реализовать
   на списках. Именно это мы и предлагаем вам сделать.
 -}
@@ -41,26 +42,28 @@ import qualified Data.IntMap as Map
 data Stack a = Stack [a] deriving (Eq, Show)
 
 createStack :: Stack a
-createStack = error "not implemented"
+createStack = Stack []
 
 -- Обратите внимание, что все структуры данных неизменяемые (immutable). Значит, если операция
 -- предполагает изменение структуры, то она просто должна возвращать новую уже изменённую версию.
 push :: Stack a -> a -> Stack a
-push stack x = error "not implemented"
+push (Stack x) elem = Stack (elem : x)
 
 pop :: Stack a -> Maybe (Stack a)
-pop stack = error "not implemented"
+pop (Stack []       ) = Nothing
+pop (Stack (top : x)) = Just (Stack x)
 
 peek :: Stack a -> Maybe a
-peek stack = error "not implemented"
+peek (Stack []       ) = Nothing
+peek (Stack (top : x)) = Just top
 
 -- </Задачи для самостоятельного решения>
 
 {- Важно, что такая очень прямолинейная реализация будет эффективной. Почему?
-  
+
   Дело в том, что операция `:` в Haskell работает за O(1). И это несовсем очевидно.
   Рассмотрим такой пример:
-  
+
     > a = [1,2,3]
     > b = 0 : a
     > a
@@ -107,14 +110,14 @@ enqueue' :: [a] -> a -> [a]
 enqueue' queue x = queue ++ [x]
 
 dequeue' :: [a] -> (a, [a])
-dequeue' [] = error "Queue is empty"
-dequeue' (q:qs) = (q, qs)             -- возвращаем (элемент, новая версия очереди)
+dequeue' []       = error "Queue is empty"
+dequeue' (q : qs) = (q, qs)             -- возвращаем (элемент, новая версия очереди)
 
 {- Насколько эффективно это будет работать?
-  
+
   Мы уже выяснили, что (:) работает быстро, а значит нас интересует эффективность конкатенации.
   Здесь может иметь значение то, лениво или строго она выполняется.
-  
+
   Строгий случай.
   При дописывании нового элемента в связный список нельзя сделать тот же трюк, который мы описывали выше.
   Придётся скопировать всю структуру. Посмотрим на рисунок:
@@ -126,10 +129,10 @@ dequeue' (q:qs) = (q, qs)             -- возвращаем (элемент, �
   ссылка из 2:
 
   a,b -> 1 -> 2 -> nil  -- xтобы работали оба списка элемент 2 должен ссылаться и на nil, и на 3
-              |   
+              |
               v   ????
               3
-  
+
   А значит enqueue будет работать за O(n), что, конечно, очень медленно.
 
   Ленивый случай.
@@ -140,9 +143,9 @@ dequeue' (q:qs) = (q, qs)             -- возвращаем (элемент, �
     [1,2]   [3]
 
   Тогда, получение головы списка, которое участвует в реализации очереди, можно представить вот так:
-  
+
     head (xs ++ ys) = if null xs then head ys else head xs
-  
+
   Выглядит так, как будто работать будет быстро. К сожалению, для большой очереди дерево будет высоким:
 
     [1] ++ [2] ++ [3] ++ ... ++ [n]                 (++)
@@ -159,7 +162,7 @@ dequeue' (q:qs) = (q, qs)             -- возвращаем (элемент, �
    либо пройтись по высокому дерево, что так же долго.
 -}
 
-{- 
+{-
   Поэтому воспользуемся реализацией очереди на двух стеках. В такой реализации иногда операции
   требуют O(n) времени, но в среднем выполняются за O(1).
   https://neerc.ifmo.ru/wiki/index.php?title=Очередь -- #Реализация_на_двух_стеках
@@ -170,17 +173,21 @@ dequeue' (q:qs) = (q, qs)             -- возвращаем (элемент, �
 data Queue a = Queue [a] [a] deriving (Eq, Show)
 
 createQueue :: Queue a
-createQueue = error "not implemented"
+createQueue = Queue [] []
 
 enqueue :: Queue a -> a -> Queue a
-enqueue queue x = error "not implemented"
+enqueue (Queue leftStack rightStack) elem = Queue (elem : leftStack) rightStack
 
 -- если очередь пустая возвращает ошибку
 dequeue :: Queue a -> (a, Queue a)
-dequeue queue = error "not implemented"
+dequeue (Queue []        []) = error "Queue is empty"
+dequeue (Queue leftStack []) = dequeue (Queue [] (reverse leftStack))
+dequeue (Queue leftStack (head : rightStack)) =
+  (head, Queue leftStack rightStack)
 
 isEmpty :: Queue a -> Bool
-isEmpty queue = error "not implemented"
+isEmpty (Queue [] []) = True
+isEmpty _             = False
 
 -- </Задачи для самостоятельного решения>
 
@@ -227,7 +234,7 @@ isEmpty queue = error "not implemented"
     range :: (a, a) -> [a]
     index :: (a, a) -> a -> Int
     ...
-  
+
   (i, i)    — максимальный и минимальный индексы массива
   [(i, e)]  — список пар (индекс, значение)
   Array i e — созданный массив
@@ -239,16 +246,16 @@ isEmpty queue = error "not implemented"
 -}
 
 x :: Array Int Int
-x = array (0, 9) [(i, i) | i <- [0..9]]
+x = array (0, 9) [ (i, i) | i <- [0 .. 9] ]
 
 -- Т.к. у Char есть instance класса Ix, то индексами можно задать и символы
 -- все Instance можно посмотреть с помощью `:i Ix`
 y :: Array Char Int
-y = array ('a', 'c') [(chr i, i) | i <- [ord 'a'..ord 'c']]
+y = array ('a', 'c') [ (chr i, i) | i <- [ord 'a' .. ord 'c'] ]
 
 -- Т.к. массив полиморфный, можно создать и двойной массив, т.е. массив массивов
 matrix :: Array Int (Array Int Int)
-matrix = array (0, 2) [(i, x) | i <- [0..2]]
+matrix = array (0, 2) [ (i, x) | i <- [0 .. 2] ]
 
 {-
   Интересно посмотреть, что будет, если диапазон индексов будет больше, чем список элементов:
@@ -280,7 +287,7 @@ matrix00 = matrix ! 0 ! 0
 -}
 
 z :: Array Int Int
-z = x // [(i, 0) | i <- [0..9], even i]  -- в `y` на всех чётных местах `x` стоит 0
+z = x // [ (i, 0) | i <- [0 .. 9], even i ]  -- в `y` на всех чётных местах `x` стоит 0
 
 {- Разные древовидные структуры
 
@@ -313,13 +320,13 @@ z = x // [(i, 0) | i <- [0..9], even i]  -- в `y` на всех чётных м
 -}
 
 set :: Set.Set Integer
-set = Set.fromList [1..100]
+set = Set.fromList [1 .. 100]
 
 oddSet :: Set.Set Integer
-oddSet = Set.fromList [i | i <- [1,3..99]]
+oddSet = Set.fromList [ i | i <- [1, 3 .. 99] ]
 
 evenSet :: Set.Set Integer
-evenSet =  Set.difference set oddSet
+evenSet = Set.difference set oddSet
 
 emptySet :: Set.Set Integer
 emptySet = Set.intersection evenSet oddSet
@@ -376,9 +383,47 @@ emptySet = Set.intersection evenSet oddSet
   https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html?highlight=ambiguous#extension-AllowAmbiguousTypes
 -}
 
+zipWithIndex :: [Int] -> [(Int, Int)]
+zipWithIndex = zipWith (\i v -> (i, v)) [0 ..]
+
+class IntArray a where
+  fromList :: [(Int, Int)] -> a    -- создать из списка пар [(index, value)]
+  toList :: a -> [(Int, Int)]      -- преобразовать в список пар [(index, value)]
+  update :: a -> Int -> Int -> a   -- обновить элемент по индексу
+  (#) :: a -> Int -> Int           -- получить элемент по индексу
+
+instance IntArray [Int] where
+  fromList pairs = map
+    (\case
+      (i, v) -> v
+    )
+    pairs
+  toList = zipWithIndex
+  update intlist index value = fromList
+    (zipWith (\i v -> if index == i then (i, value) else (i, v)) [0 ..] intlist)
+  (#) intlist index = intlist !! index
+
+instance IntArray (Map.IntMap Int) where
+  fromList pairs = Map.fromList pairs
+  toList intmap = Map.toList intmap
+  update intmap index value = Map.insert index value intmap
+  (#) intmap index = intmap Map.! index
+
+instance IntArray (Array Int Int) where
+  fromList pairs = array (0, length pairs - 1) pairs
+  toList = assocs
+  update intarray index value = intarray // [(index, value)]
+  (#) intarray index = intarray ! index
+
+counts :: IntArray a => [Int] -> a
+counts xs = foldl (\arr i -> update arr i ((#) arr i + 1))
+                  (fromList (zipWithIndex (replicate (maximum xs + 1) 0)))
+                  xs
+
 -- Сортирует массив целых неотрицательных чисел по возрастанию
-countingSort :: forall a. IntArray a => [Int] -> [Int]
-countingSort = error "not implemented"
+countingSort :: forall a . IntArray a => [Int] -> [Int]
+countingSort [] = []
+countingSort xs = concat [ replicate n x | (x, n) <- toList (counts @a xs) ]
 
 {-
   Tак можно запустить функцию сортировки с использованием конкретной реализацией массива:
@@ -391,7 +436,7 @@ countingSort = error "not implemented"
 -}
 
 sorted :: [Int]
-sorted = countingSort @[Int] [2,2,2,3,3,3,1,1,1]
+sorted = countingSort @[Int] [2, 2, 2, 3, 3, 3, 1, 1, 1]
 
 -- </Задачи для самостоятельного решения>
 
