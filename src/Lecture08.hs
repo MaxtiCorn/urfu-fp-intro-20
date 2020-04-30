@@ -386,6 +386,7 @@ emptySet = Set.intersection evenSet oddSet
 zipWithIndex :: [Int] -> [(Int, Int)]
 zipWithIndex = zipWith (\i v -> (i, v)) [0 ..]
 
+-- Названия методов можно менять
 class IntArray a where
   fromList :: [(Int, Int)] -> a    -- создать из списка пар [(index, value)]
   toList :: a -> [(Int, Int)]      -- преобразовать в список пар [(index, value)]
